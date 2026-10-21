@@ -34,7 +34,7 @@ function Login() {
     setLoggedIn(true);
     const prev = getTeacher();
     saveTeacher({
-      name: isReg ? name.trim() : prev?.name || name.trim() || email.split("@")[0],
+      name: isReg ? name.trim() : prev?.name || name.trim() || (email.split("@")[0] ?? ""),
       email,
       school: prev?.school ?? "",
       governorate: prev?.governorate ?? "",
