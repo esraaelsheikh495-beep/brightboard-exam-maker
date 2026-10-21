@@ -165,13 +165,9 @@ export function parseExamText(raw: string): BankQuestion[] {
     const rest = parts.filter((p) => p !== ansPart);
     const text = rest[0] ?? "";
     if (!text) continue;
-    questions.push({
-      id: uid(),
-      type,
-      text,
-      options: type === "choose" ? rest.slice(1, 5) : undefined,
-      answer,
-    });
+    const q: BankQuestion = { id: uid(), type, text, answer };
+    if (type === "choose") q.options = rest.slice(1, 5);
+    questions.push(q);
   }
   return questions;
 }
