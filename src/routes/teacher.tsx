@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Shell } from "@/components/Shell";
 import { Emblem } from "@/components/Emblem";
 import { getTeacher, saveTeacher, GOVERNORATES } from "@/lib/store";
@@ -20,15 +20,10 @@ export const Route = createFileRoute("/teacher")({
 
 function TeacherPage() {
   const navigate = useNavigate();
-  const prev = getTeacher();
   const [form, setForm] = useState({
-    name: prev?.name ?? "",
-    email: prev?.email ?? "",
-    school: prev?.school ?? "",
-    governorate: prev?.governorate ?? "",
-    specialization: prev?.specialization ?? "",
-    classes: prev?.classes ?? "",
+    name: "", email: "", school: "", governorate: "", specialization: "", classes: "",
   });
+  useEffect(() => { const prev = getTeacher(); if (prev) setForm(prev); }, []);
   const [err, setErr] = useState("");
 
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>

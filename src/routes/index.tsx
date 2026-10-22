@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Emblem } from "@/components/Emblem";
 import { Bg } from "@/components/Shell";
 import { isLoggedIn } from "@/lib/store";
+import { useStoredValue } from "@/hooks/use-stored-value";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -26,7 +27,7 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
-  const logged = isLoggedIn();
+  const [logged] = useStoredValue(isLoggedIn, false);
   return (
     <>
       <Bg />

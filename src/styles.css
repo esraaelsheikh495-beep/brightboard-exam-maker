@@ -367,3 +367,27 @@ body {
 .sq-bk input { width: 20px; height: 20px; flex: none; margin: 0; }
 .sq-bk-nm { font-weight: 800; font-size: 15px; }
 .sq-bk-mt { font-size: 12.5px; color: #7b8aa0; font-weight: 600; }
+
+/* Exam viewing and exports share the existing platform palette. */
+.sq-exam-actions { margin: 12px 0; justify-content: flex-start; }
+.sq-exam-actions .sq-btn { height: auto; white-space: normal; }
+.sq-answer-toggle { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; }
+.sq-answer-toggle input { width: 18px; height: 18px; }
+.sq-exam-paper { background: var(--card); color: var(--sq-text); padding: 24px; border: 1px solid var(--sq-line); }
+.sq-exam-paper h1 { font-size: 24px; line-height: 1.4; margin: 0 0 12px; overflow-wrap: anywhere; }
+.sq-exam-paper h2 { font-size: 18px; margin: 24px 0 8px; border-bottom: 1px solid var(--sq-line); }
+.sq-exam-paper p { margin: 8px 0; overflow-wrap: anywhere; }
+.sq-exam-question { break-inside: avoid; margin-bottom: 20px; }
+.sq-exam-question ol { list-style: upper-alpha; padding-inline-start: 28px; }
+.sq-exam-answer { color: var(--sq-green); }
+.sq-bk > div { min-width: 0; }
+.sq-bk-nm { overflow-wrap: anywhere; }
+@media (max-width: 420px) { .sq-exam-paper { padding: 16px; } }
+@media print {
+  @page { size: A4; margin: 12mm; }
+  body { background: var(--card); print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  .sq-bg, .sq-nav, .sq-print-hide { display: none !important; }
+  .sq-phone { width: 100%; max-width: none !important; padding: 0; margin: 0; }
+  .sq-exam-paper { padding: 0; border: 0; }
+  .sq-exam-paper h2 { break-after: avoid; }
+}

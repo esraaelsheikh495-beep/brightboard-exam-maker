@@ -3,6 +3,10 @@ import { useState } from "react";
 import { Shell } from "@/components/Shell";
 import { Emblem } from "@/components/Emblem";
 import { GRADES, TYPE_META, getBanks, getExams } from "@/lib/store";
+import { Button } from "@/components/ui/button";
+import { Download, Eye, KeyRound } from "lucide-react";
+import { downloadBank, downloadExam } from "@/lib/exam-output";
+import { useStoredValue } from "@/hooks/use-stored-value";
 
 export const Route = createFileRoute("/library")({
   head: () => ({
@@ -19,8 +23,8 @@ export const Route = createFileRoute("/library")({
 });
 
 function Library() {
-  const [banks] = useState(getBanks());
-  const [exams] = useState(getExams());
+  const [banks] = useStoredValue(getBanks, []);
+  const [exams] = useStoredValue(getExams, []);
   const [grade, setGrade] = useState("");
 
   const fBanks = banks.filter((b) => !grade || b.grade === grade);
@@ -65,6 +69,7 @@ function Library() {
                   {new Date(b.createdAt).toLocaleDateString()}
                 </div>
               </div>
+              <Button variant="quiz" className="sq-ghost" onClick={() => downloadBank(b)} aria-label={`Download bank ${b.name}`}><Download /> TXT</Button>
             </div>
           ))
         )}
@@ -101,6 +106,11 @@ function Library() {
                       {TYPE_META[p.type].icon} {TYPE_META[p.type].label} ×{p.count}
                     </span>
                   ))}
+                </div>
+                <div className="sq-row sq-exam-actions">
+                  <Button variant="quiz" asChild><Link to="/exam/$examId" params={{ examId: e.id }}><Eye /> Open exam</Link></Button>
+                  <Button variant="quiz" className="sq-ghost" onClick={() => downloadExam(e)}><Download /> Word</Button>
+                  <Button variant="quiz" className="sq-ghost" onClick={() => downloadExam(e, true)}><KeyRound /> Answer key</Button>
                 </div>
               </div>
             </div>

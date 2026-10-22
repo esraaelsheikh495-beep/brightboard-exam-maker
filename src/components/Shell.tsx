@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { isLoggedIn, setLoggedIn } from "@/lib/store";
+import { useStoredValue } from "@/hooks/use-stored-value";
 
 export function Bg() {
   return (
@@ -15,7 +16,7 @@ export function Bg() {
 
 export function Nav() {
   const navigate = useNavigate();
-  const logged = isLoggedIn();
+  const [logged] = useStoredValue(isLoggedIn, false);
   return (
     <nav className="sq-nav">
       <Link to="/" className="sq-nav-link">Home</Link>
