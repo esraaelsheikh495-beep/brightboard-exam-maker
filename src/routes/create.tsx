@@ -6,7 +6,13 @@ import {
   GRADES, SUBJECTS, TYPE_META, getBanks, saveBank, saveExam, uid,
   parseExamText,
   type BankQuestion, type ExamTypePlan, type QuestionBank, type QuestionType,
+  type Exam,
 } from "@/lib/store";
+import { Button } from "@/components/ui/button";
+import { Download, Eye } from "lucide-react";
+import { downloadExam } from "@/lib/exam-output";
+import { selectExamQuestions } from "@/lib/exam-selection";
+import { useStoredValue } from "@/hooks/use-stored-value";
 
 export const Route = createFileRoute("/create")({
   head: () => ({
@@ -59,12 +65,13 @@ function CreateExam() {
   });
 
   // Step 5 — bank pick
-  const [banks, setBanks] = useState<QuestionBank[]>(getBanks());
+  const [banks, setBanks] = useStoredValue<QuestionBank[]>(getBanks, []);
   const [pickedBanks, setPickedBanks] = useState<Record<string, boolean>>({});
   const [random, setRandom] = useState(true);
   const [pickedQuestions, setPickedQuestions] = useState<Record<string, boolean>>({});
 
   const [createdId, setCreatedId] = useState("");
+  const [createdExam, setCreatedExam] = useState<Exam | null>(null);
 
   const totalQ = TYPES.reduce((s, t) => s + (plan[t].on ? plan[t].n : 0), 0);
   const totalMarks = TYPES.reduce((s, t) => s + (plan[t].on ? plan[t].n * plan[t].m : 0), 0);
@@ -94,6 +101,7 @@ function CreateExam() {
     if (time < 0 || time > 300) return showErr("Time must be between 0 and 300 minutes.");
     if (points < 1) return showErr("Number of exam points must be at least 1.");
     setErr("");
+    setBankGrade(grade);
     setStep("source");
   };
 
@@ -107,7 +115,9 @@ function CreateExam() {
 
   /* ---------- step 3: upload file ---------- */
   const handleFile = async (f: File) => {
-    const text = await f.text();
+    setParsed([]);
+    if (!/\.(txt|md)$/i.test(f.name)) return showErr("Please upload a TXT or MD question file.");
+    const text = await f.text().catch(() => "");
     const qs = parseExamText(text);
     if (!qs.length) {
       showErr("Could not find questions in this file. Use the format shown below (blocks separated by an empty line).");
@@ -133,6 +143,17 @@ function CreateExam() {
     saveBank(bank);
     setBanks(getBanks());
     setPickedBanks((p) => ({ ...p, [bank.id]: true }));
+    if (source === "exam") {
+      const importedPlan = TYPES.filter((t) => parsed.some((q) => q.type === t)).map((type) => ({ type, count: parsed.filter((q) => q.type === type).length, marks: points / parsed.length }));
+      const imported: Exam = { id: uid(), title: title.trim() || bank.name, subject, className, grade: bankGrade, timeMinutes: time, totalPoints: points, plan: importedPlan, bankIds: [bank.id], random: false, questions: parsed, createdAt: new Date().toISOString() };
+      saveExam(imported);
+      setCreatedExam(imported);
+      setCreatedId(imported.id);
+      setErr("");
+      setStep("done");
+      return;
+    }
+    setGrade(bankGrade);
     setErr("");
     setStep("types");
   };
@@ -154,6 +175,7 @@ function CreateExam() {
     saveBank(bank);
     setBanks(getBanks());
     setPickedBanks((p) => ({ ...p, [bank.id]: true }));
+    setGrade(bankGrade);
     setErr("");
     setStep("types");
   };
@@ -183,23 +205,11 @@ function CreateExam() {
     if (!ids.length) return showErr("Choose at least one question bank — or upload one first.");
     if (!onTypes.length) return showErr("Choose at least one question type.");
 
-    let questions: BankQuestion[] = [];
-    if (random) {
-      for (const t of onTypes) {
-        const avail = pool.filter((q) => q.type === t);
-        const want = plan[t].n;
-        if (avail.length < want)
-          return showErr(
-            `Not enough "${TYPE_META[t].label}" questions in the selected banks: ${avail.length} available, ${want} requested. Lower the number or add more questions.`
-          );
-        const shuffled = [...avail].sort(() => Math.random() - 0.5);
-        questions.push(...shuffled.slice(0, want));
-      }
-    } else {
-      const idsQ = Object.keys(pickedQuestions).filter((k) => pickedQuestions[k]);
-      questions = pool.filter((q) => idsQ.includes(q.id));
-      if (!questions.length) return showErr("Pick at least one question, or switch to Random.");
-    }
+    const examPlan: ExamTypePlan[] = onTypes.map((type) => ({ type, count: plan[type].n, marks: plan[type].m }));
+    let questions: BankQuestion[];
+    try {
+      questions = selectExamQuestions(pool, examPlan, random, Object.keys(pickedQuestions).filter((id) => pickedQuestions[id]), points);
+    } catch (error) { return showErr(error instanceof Error ? error.message : "Could not create exam."); }
 
     const exam = {
       id: uid(),
@@ -209,13 +219,14 @@ function CreateExam() {
       grade,
       timeMinutes: time,
       totalPoints: points,
-      plan: onTypes.map((t) => ({ type: t, count: plan[t].n, marks: plan[t].m }) as ExamTypePlan),
+      plan: examPlan,
       bankIds: ids,
       random,
       questions,
       createdAt: new Date().toISOString(),
     };
     saveExam(exam);
+    setCreatedExam(exam);
     setCreatedId(exam.id);
     setErr("");
     setStep("done");
@@ -345,14 +356,14 @@ function CreateExam() {
             Upload the file, choose which grade folder to save it in, then press Upload / Save — it goes straight to your Library.
           </p>
 
-          <label className="sq-label">Save it in folder</label>
-          <select value={bankGrade} onChange={(e) => setBankGrade(e.target.value)}>
+          <label className="sq-label" htmlFor="upload-grade">Save it in folder</label>
+          <select id="upload-grade" value={bankGrade} onChange={(e) => setBankGrade(e.target.value)}>
             <option value="">— Choose folder —</option>
             {GRADES.map((g) => <option key={g} value={g}>Grade {g}</option>)}
           </select>
 
-          <label className="sq-label" style={{ marginTop: 10 }}>Bank name</label>
-          <input type="text" value={bankName} onChange={(e) => setBankName(e.target.value)} placeholder="e.g. Unit 1 — Vocabulary" />
+          <label className="sq-label" htmlFor="upload-name" style={{ marginTop: 10 }}>Bank name</label>
+          <input id="upload-name" type="text" value={bankName} onChange={(e) => setBankName(e.target.value)} placeholder="e.g. Unit 1 — Vocabulary" />
 
           <div
             className="sq-drop"
@@ -363,11 +374,11 @@ function CreateExam() {
           >
             <div style={{ fontSize: 34 }}>⬆️</div>
             <b>{parsed.length ? `${parsed.length} questions ready ✓` : "Click to choose the file"}</b>
-            <small className="sq-small">TXT / CSV / MD — questions separated by an empty line</small>
+            <small className="sq-small">TXT / MD</small>
             <input
               ref={fileRef}
               type="file"
-              accept=".txt,.csv,.md,.json"
+              accept=".txt,.md"
               style={{ display: "none" }}
               onChange={(e) => {
                 const f = e.target.files?.[0];
@@ -400,17 +411,18 @@ function CreateExam() {
           <div className="sq-step"><b className="sq-n">3</b><h2>Paste exam</h2></div>
           <p className="sq-sub">Paste the questions here — each question block separated by an empty line.</p>
 
-          <label className="sq-label">Save it in folder</label>
-          <select value={bankGrade} onChange={(e) => setBankGrade(e.target.value)}>
+          <label className="sq-label" htmlFor="paste-grade">Save it in folder</label>
+          <select id="paste-grade" value={bankGrade} onChange={(e) => setBankGrade(e.target.value)}>
             <option value="">— Choose folder —</option>
             {GRADES.map((g) => <option key={g} value={g}>Grade {g}</option>)}
           </select>
 
-          <label className="sq-label" style={{ marginTop: 10 }}>Bank name</label>
-          <input type="text" value={bankName} onChange={(e) => setBankName(e.target.value)} placeholder="e.g. Unit 2 — Grammar" />
+          <label className="sq-label" htmlFor="paste-name" style={{ marginTop: 10 }}>Bank name</label>
+          <input id="paste-name" type="text" value={bankName} onChange={(e) => setBankName(e.target.value)} placeholder="e.g. Unit 2 — Grammar" />
 
-          <label className="sq-label" style={{ marginTop: 10 }}>Exam text</label>
+          <label className="sq-label" htmlFor="paste-text" style={{ marginTop: 10 }}>Exam text</label>
           <textarea
+            id="paste-text"
             dir="auto"
             rows={10}
             value={pasteText}
@@ -547,7 +559,7 @@ function CreateExam() {
 
           {!random && pool.length > 0 && (
             <div style={{ marginTop: 12, maxHeight: 320, overflowY: "auto" }}>
-              {pool.map((q) => (
+              {pool.filter((q) => onTypes.includes(q.type)).map((q) => (
                 <label key={q.id} className={`sq-bk ${pickedQuestions[q.id] ? "on" : ""}`}>
                   <input
                     type="checkbox"
@@ -587,11 +599,15 @@ function CreateExam() {
           <div style={{ fontSize: 46 }}>🎉</div>
           <h2 style={{ margin: "4px 0" }}>Exam created and saved to your Library</h2>
           <p className="sq-sub">
-            {title.trim() || `${subject} exam — Grade ${grade}`} · {totalQ} questions · {Math.round(totalMarks * 100) / 100} marks
+            {createdExam?.title} · {createdExam?.questions.length} questions · {createdExam?.totalPoints} marks
             {time > 0 ? ` · ${time} minutes` : ""}
           </p>
-          <div className="sq-ok">The exam is saved automatically in your Library. You can open it anytime from any device on this browser.</div>
+          <div className="sq-ok">Saved in Library · Grade {createdExam?.grade} · This browser only</div>
           <div className="sq-row" style={{ justifyContent: "center", marginTop: 10 }}>
+            {createdExam && <>
+              <Button variant="quiz" onClick={() => downloadExam(createdExam)}><Download /> Download Word</Button>
+              <Button variant="quiz" className="sq-ghost" asChild><Link to="/exam/$examId" params={{ examId: createdExam.id }}><Eye /> View / PDF</Link></Button>
+            </>}
             <Link className="sq-btn" to="/library">📚 Open Library</Link>
             <button
               type="button"
@@ -599,6 +615,7 @@ function CreateExam() {
               onClick={() => {
                 setStep("info");
                 setCreatedId("");
+                setCreatedExam(null);
                 setParsed([]);
                 setPasteText("");
                 setBankName("");
