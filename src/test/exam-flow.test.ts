@@ -19,7 +19,7 @@ describe("Exam creation and output", () => {
     expect(() => selectExamQuestions(questions, exam.plan, true, [], 20)).toThrow("exam points (20)");
   });
   it("Choose questions require four options", () => {
-    expect(() => selectExamQuestions([{ ...questions[0], id: "x", type: "choose", text: "q", answer: "a", options: ["a", "b"] }], [exam.plan[0]], true, [], 2)).toThrow("four options");
+    expect(() => selectExamQuestions([{ id: "x", type: "choose", text: "q", answer: "a", options: ["a", "b"] }], [{ type: "choose", count: 1, marks: 2 }], true, [], 2)).toThrow("four options");
   });
   it("downloaded bank text preserves types, choices and answers when reuploaded", () => {
     expect(parseExamText(bankText({ questions })).map(({ id, ...q }) => q)).toEqual(questions.map(({ id, ...q }) => q));
