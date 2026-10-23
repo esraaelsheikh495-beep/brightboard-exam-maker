@@ -67,8 +67,9 @@ function write(key: string, value: unknown) {
   try {
     localStorage.setItem(key, JSON.stringify(value));
   } catch {
-    /* ignore */
+    throw new Error("Could not save on this device. Free browser storage and try again.");
   }
+  window.dispatchEvent(new Event("sqp-store-change"));
 }
 
 export const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
@@ -92,6 +93,12 @@ export const saveExam = (exam: Exam) => {
   all.unshift(exam);
   write(K.exams, all);
 };
+
+export const deleteBank = (id: string) => write(K.banks, getBanks().filter((bank) => bank.id !== id));
+export const deleteExam = (id: string) => write(K.exams, getExams().filter((exam) => exam.id !== id));
+export function getStats() {
+  return { exams: getExams().length, banks: getBanks().length, questions: getBanks().reduce((sum, bank) => sum + bank.questions.length, 0) };
+}
 
 export const TYPE_META: Record<
   QuestionType,
