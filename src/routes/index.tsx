@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Emblem } from "@/components/Emblem";
-import { Bg } from "@/components/Shell";
-import { isLoggedIn } from "@/lib/store";
+import { Bg, Nav } from "@/components/Shell";
+import { isLoggedIn, getStats } from "@/lib/store";
 import { useStoredValue } from "@/hooks/use-stored-value";
 
 export const Route = createFileRoute("/")({
@@ -11,13 +11,13 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "A smart platform for WE teachers: upload your question bank, pick question types, and build auto-graded exams in minutes.",
+           "Create and download exams from your saved question banks with manual or random selection.",
       },
       { property: "og:title", content: "Smart Quiz Platform" },
       {
         property: "og:description",
         content:
-          "Upload your question bank, pick question types, and build auto-graded exams in minutes.",
+           "Create and download exams from saved question banks with manual or random selection.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -28,10 +28,12 @@ export const Route = createFileRoute("/")({
 
 function Index() {
   const [logged] = useStoredValue(isLoggedIn, false);
+  const [stats] = useStoredValue(getStats, { exams: 0, banks: 0, questions: 0 });
   return (
     <>
       <Bg />
       <main className="sq-hero">
+        <Nav />
         <div className="sq-rise" style={{ filter: "drop-shadow(0 18px 28px rgba(122,79,208,.25))" }}>
           <Emblem size={200} />
         </div>
@@ -46,11 +48,11 @@ function Index() {
         </Link>
 
         <div className="sq-pills">
-          <span>🗂 Upload your question bank</span>
-          <span>🎲 Random questions from the bank</span>
-          <span>✅ Auto-grading</span>
-          <span>📊 Grades in Excel</span>
+          <span>📝 Exams <b>{stats.exams}</b></span>
+          <span>🗂 Banks <b>{stats.banks}</b></span>
+          <span>Questions <b>{stats.questions}</b></span>
         </div>
+        <Link to="/library" className="sq-btn sq-ghost">Open Library</Link>
       </main>
     </>
   );

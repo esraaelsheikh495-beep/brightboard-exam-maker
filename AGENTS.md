@@ -13,3 +13,6 @@
 - Keep exam selection validation in `exam-selection.ts` so manual and random modes honor the same counts and points.
 - Keep downloadable exam and bank serialization in `exam-output.ts`; student documents omit answers, and PDF uses the exam page's print layout.
 - The existing sign-in and storage are device-local prototypes, not authenticated shared accounts; never claim shared access until Cloud is implemented.
+- Store changes emit a browser event and storage errors propagate so navigation, stats and lists remain accurate without false save confirmations.
+- Export genuine DOCX with docx and PDF with jsPDF plus per-block browser rendering to preserve multilingual exam layout and safe page breaks.
+- Generate a TanStack SPA shell for static Apache delivery; package client assets only and retain the normal Lovable server adapter for publishing.

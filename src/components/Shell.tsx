@@ -2,6 +2,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { isLoggedIn, setLoggedIn } from "@/lib/store";
 import { useStoredValue } from "@/hooks/use-stored-value";
+import { Button } from "@/components/ui/button";
 
 export function Bg() {
   return (
@@ -20,14 +21,14 @@ export function Nav() {
   return (
     <nav className="sq-nav">
       <Link to="/" className="sq-nav-link">Home</Link>
-      {logged && (
+      {(
         <>
           <Link to="/create" className="sq-nav-link">Create exam</Link>
           <Link to="/library" className="sq-nav-link">📚 Library</Link>
         </>
       )}
       {logged ? (
-        <button
+        <Button variant="ghost"
           type="button"
           className="sq-nav-link"
           onClick={() => {
@@ -36,7 +37,7 @@ export function Nav() {
           }}
         >
           Sign out
-        </button>
+        </Button>
       ) : (
         <Link to="/login" className="sq-nav-link">Sign in</Link>
       )}
