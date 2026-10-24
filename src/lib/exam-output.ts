@@ -68,9 +68,11 @@ export async function createPdf(paper: HTMLElement) {
   let y = 12;
   try {
     const blocks = clone.querySelectorAll<HTMLElement>("header, section > h2, .sq-exam-question");
-    for (const block of blocks) {
+    for (const [index, block] of Array.from(blocks).entries()) {
       const canvas = await capture(block, { scale: 2, backgroundColor: getComputedStyle(paper).backgroundColor });
       const height = canvas.height * 186 / canvas.width;
+      const next = blocks[index + 1];
+      if (block.tagName === "H2" && next && y + height + next.getBoundingClientRect().height * 186 / 720 + 4 > 285 && y > 12) { pdf.addPage(); y = 12; }
       if (height <= 273) {
         if (y + height > 285) { pdf.addPage(); y = 12; }
         pdf.addImage(canvas.toDataURL("image/png"), "PNG", 12, y, 186, height);
