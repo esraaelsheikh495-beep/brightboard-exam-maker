@@ -75,7 +75,7 @@ export async function createPdf(paper: HTMLElement) {
       if (block.tagName === "H2" && next && y + height + next.getBoundingClientRect().height * 186 / 720 + 4 > 285 && y > 12) { pdf.addPage(); y = 12; }
       if (height <= 273) {
         if (y + height > 285) { pdf.addPage(); y = 12; }
-        pdf.addImage(canvas.toDataURL("image/png"), "PNG", 12, y, 186, height);
+        pdf.addImage(canvas.toDataURL("image/jpeg", 0.92), "JPEG", 12, y, 186, height);
         y += height + 4;
       } else {
         // Oversized questions are split without dropping any pixels.
@@ -88,7 +88,7 @@ export async function createPdf(paper: HTMLElement) {
           if (!context) throw new Error("PDF rendering unavailable");
           context.drawImage(canvas, 0, offset, canvas.width, pixels, 0, 0, canvas.width, pixels);
           const mm = pixels * 186 / canvas.width;
-          pdf.addImage(slice.toDataURL("image/png"), "PNG", 12, y, 186, mm);
+          pdf.addImage(slice.toDataURL("image/jpeg", 0.92), "JPEG", 12, y, 186, mm);
           y += mm + 4; offset += pixels;
         }
       }
