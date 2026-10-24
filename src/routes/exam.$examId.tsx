@@ -1,10 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { Download, Printer, ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { Shell } from "@/components/Shell";
 import { Button } from "@/components/ui/button";
 import { getExams, TYPE_META } from "@/lib/store";
-import { downloadExam } from "@/lib/exam-output";
+import { ExamDownloads } from "@/components/ExamDownloads";
 import { useStoredValue } from "@/hooks/use-stored-value";
 
 export const Route = createFileRoute("/exam/$examId")({
@@ -29,10 +29,8 @@ function ExamPage() {
   return <Shell wide>
     <div className="sq-row sq-print-hide sq-exam-actions">
       <Button variant="quiz" className="sq-ghost" asChild><Link to="/library"><ArrowLeft /> Library</Link></Button>
-      <Button variant="quiz" onClick={() => downloadExam(exam, answers)}><Download /> Download Word</Button>
-      <Button variant="quiz" className="sq-ghost" onClick={() => window.print()}><Printer /> Print / PDF</Button>
+      <ExamDownloads exam={exam} answers={answers} />
       <label className="sq-answer-toggle"><input type="checkbox" checked={answers} onChange={(event) => setAnswers(event.target.checked)} /> Answer key</label>
-      <p className="sq-small">PDF: اختاري «حفظ بصيغة PDF» من نافذة الطباعة.</p>
     </div>
     <article className="sq-exam-paper">
       <header>
