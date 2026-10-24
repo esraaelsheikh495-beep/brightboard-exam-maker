@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { selectExamQuestions } from "@/lib/exam-selection";
 import { bankText, examDocument } from "@/lib/exam-output";
-import { parseExamText, saveBank, getBanks, saveExam, getExams, type Exam, type BankQuestion } from "@/lib/store";
+import { parseExamText, saveBank, getBanks, saveExam, getExams, deleteBank, deleteExam, getStats, type Exam, type BankQuestion } from "@/lib/store";
 
 const questions: BankQuestion[] = [
   { id: "1", type: "choose", text: "عاصمة مصر؟", options: ["Cairo", "Giza", "Luxor", "Aswan"], answer: "Cairo" },
@@ -35,5 +35,20 @@ describe("Exam creation and output", () => {
     saveExam(exam);
     expect(getBanks()[0]?.grade).toBe("2");
     expect(getExams()[0]?.grade).toBe("2");
+  });
+  it("deleting a bank preserves previously saved exam questions", () => {
+    localStorage.clear();
+    saveBank({ id: "bank", name: "Bank", grade: "2", subject: "English", createdAt: exam.createdAt, questions });
+    saveExam(exam); deleteBank("bank");
+    expect(getBanks()).toHaveLength(0);
+    expect(getExams()[0]?.questions).toHaveLength(2);
+  });
+  it("stats count only saved exams, banks and bank questions", () => {
+    localStorage.clear();
+    saveBank({ id: "bank", name: "Bank", grade: "2", subject: "English", createdAt: exam.createdAt, questions });
+    saveExam(exam);
+    expect(getStats()).toEqual({ exams: 1, banks: 1, questions: 2 });
+    deleteExam(exam.id);
+    expect(getStats()).toEqual({ exams: 0, banks: 1, questions: 2 });
   });
 });

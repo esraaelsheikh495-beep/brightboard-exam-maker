@@ -140,13 +140,13 @@ function CreateExam() {
       createdAt: new Date().toISOString(),
       questions: parsed,
     };
-    saveBank(bank);
+    try { saveBank(bank); } catch (error) { return showErr(error instanceof Error ? error.message : "Save failed."); }
     setBanks(getBanks());
     setPickedBanks((p) => ({ ...p, [bank.id]: true }));
     if (source === "exam") {
       const importedPlan = TYPES.filter((t) => parsed.some((q) => q.type === t)).map((type) => ({ type, count: parsed.filter((q) => q.type === type).length, marks: points / parsed.length }));
       const imported: Exam = { id: uid(), title: title.trim() || bank.name, subject, className, grade: bankGrade, timeMinutes: time, totalPoints: points, plan: importedPlan, bankIds: [bank.id], random: false, questions: parsed, createdAt: new Date().toISOString() };
-      saveExam(imported);
+      try { saveExam(imported); } catch (error) { return showErr(error instanceof Error ? error.message : "Save failed."); }
       setCreatedExam(imported);
       setCreatedId(imported.id);
       setErr("");
@@ -172,7 +172,7 @@ function CreateExam() {
       createdAt: new Date().toISOString(),
       questions: qs,
     };
-    saveBank(bank);
+    try { saveBank(bank); } catch (error) { return showErr(error instanceof Error ? error.message : "Save failed."); }
     setBanks(getBanks());
     setPickedBanks((p) => ({ ...p, [bank.id]: true }));
     setGrade(bankGrade);
@@ -225,7 +225,7 @@ function CreateExam() {
       questions,
       createdAt: new Date().toISOString(),
     };
-    saveExam(exam);
+    try { saveExam(exam); } catch (error) { return showErr(error instanceof Error ? error.message : "Save failed."); }
     setCreatedExam(exam);
     setCreatedId(exam.id);
     setErr("");
@@ -542,7 +542,7 @@ function CreateExam() {
               onClick={() => setRandom(true)}
             >
               <span className="sq-src-ic">🎲</span>
-              <b>Random</b>
+              <b>Random selection by number</b>
               <small>We pick random questions by your plan</small>
             </button>
             <button
@@ -552,11 +552,17 @@ function CreateExam() {
               onClick={() => setRandom(false)}
             >
               <span className="sq-src-ic">👆</span>
-              <b>Pick myself</b>
+              <b>Manual selection</b>
               <small>Choose exactly the questions you want</small>
             </button>
           </div>
 
+          <div className="sq-grid2" style={{ marginTop: 12 }}>
+            {onTypes.map((type) => <div key={type} className="sq-small">
+              <b>{TYPE_META[type].label}</b> · Available: {availFor(type)} · Selected: {pool.filter((q) => q.type === type && pickedQuestions[q.id]).length} / {plan[type].n}
+              {random && <label>Number of questions<input aria-label={`${TYPE_META[type].label} random count`} type="number" min={1} max={50} value={plan[type].n} onChange={(e) => setPlan((p) => ({ ...p, [type]: { ...p[type], n: Math.min(50, Math.max(1, Number(e.target.value) || 1)) } }))} /></label>}
+            </div>)}
+          </div>
           {!random && pool.length > 0 && (
             <div style={{ marginTop: 12, maxHeight: 320, overflowY: "auto" }}>
               {pool.filter((q) => onTypes.includes(q.type)).map((q) => (
@@ -570,7 +576,7 @@ function CreateExam() {
                     <div className="sq-bk-nm" dir="auto">{q.text}</div>
                     <div className="sq-bk-mt">
                       <span style={{ color: TYPE_META[q.type].color, fontWeight: 800 }}>{TYPE_META[q.type].label}</span>
-                      {q.answer ? ` · Answer: ${q.answer}` : ""}
+                      {q.options?.join(" · ")}{q.answer ? ` · Answer: ${q.answer}` : ""}
                     </div>
                   </div>
                 </label>

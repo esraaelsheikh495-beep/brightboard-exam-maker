@@ -31,7 +31,7 @@ function Login() {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return setErr("اكتبي إيميل صحيح.");
     if (isReg && name.trim().length < 3) return setErr("اكتبي اسمك بالكامل (3 حروف على الأقل).");
     if (password.length < 8) return setErr("الباسورد لازم يكون 8 حروف أو أرقام على الأقل.");
-    setLoggedIn(true);
+    try {
     const prev = getTeacher();
     saveTeacher({
       name: isReg ? name.trim() : prev?.name || name.trim() || (email.split("@")[0] ?? ""),
@@ -41,6 +41,8 @@ function Login() {
       specialization: prev?.specialization ?? "",
       classes: prev?.classes ?? "",
     });
+    setLoggedIn(true);
+    } catch (error) { return setErr(error instanceof Error ? error.message : "تعذر الحفظ."); }
     navigate({ to: "/teacher" });
   };
 

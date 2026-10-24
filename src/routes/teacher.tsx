@@ -36,7 +36,7 @@ function TeacherPage() {
     if (!form.governorate) return setErr("اختاري المحافظة.");
     if (form.specialization.trim().length < 2) return setErr("اكتبي التخصص.");
     if (!form.classes.trim()) return setErr("اكتبي فصولك (مثال: 1/1, 1/2, 1/3).");
-    saveTeacher(form);
+    try { saveTeacher(form); } catch (error) { return setErr(error instanceof Error ? error.message : "تعذر الحفظ."); }
     navigate({ to: "/create" });
   };
 

@@ -2,9 +2,9 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Shell } from "@/components/Shell";
 import { Emblem } from "@/components/Emblem";
-import { GRADES, TYPE_META, getBanks, getExams } from "@/lib/store";
+import { GRADES, TYPE_META, getBanks, getExams, deleteBank, deleteExam } from "@/lib/store";
 import { Button } from "@/components/ui/button";
-import { Download, Eye, KeyRound } from "lucide-react";
+import { Download, Eye, KeyRound, Trash2 } from "lucide-react";
 import { downloadBank, downloadExam } from "@/lib/exam-output";
 import { useStoredValue } from "@/hooks/use-stored-value";
 
@@ -26,9 +26,17 @@ function Library() {
   const [banks] = useStoredValue(getBanks, []);
   const [exams] = useStoredValue(getExams, []);
   const [grade, setGrade] = useState("");
+  const [search, setSearch] = useState("");
+  const [error, setError] = useState("");
+  const remove = (id: string, name: string, bank: boolean) => {
+    if (!window.confirm(`Delete ${name}? This cannot be undone.`)) return;
+    try { bank ? deleteBank(id) : deleteExam(id); setError(""); }
+    catch (e) { setError(e instanceof Error ? e.message : "Delete failed."); }
+  };
+  const matches = (name: string, subject: string) => `${name} ${subject}`.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase());
 
-  const fBanks = banks.filter((b) => !grade || b.grade === grade);
-  const fExams = exams.filter((e) => !grade || e.grade === grade);
+  const fBanks = banks.filter((b) => (!grade || b.grade === grade) && matches(b.name, b.subject));
+  const fExams = exams.filter((e) => (!grade || e.grade === grade) && matches(e.title, e.subject));
 
   return (
     <Shell wide>
@@ -46,7 +54,10 @@ function Library() {
         </div>
       </div>
 
+      {error && <p className="sq-err" role="alert">{error}</p>}
       <div className="sq-card">
+        <label className="sq-label" htmlFor="lib-search">Search Library</label>
+        <input id="lib-search" type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Exam, bank or subject" />
         <label className="sq-label" htmlFor="lib-grade">Filter by folder</label>
         <select id="lib-grade" value={grade} onChange={(e) => setGrade(e.target.value)} style={{ maxWidth: 240 }}>
           <option value="">All grades</option>
@@ -70,6 +81,7 @@ function Library() {
                 </div>
               </div>
               <Button variant="quiz" className="sq-ghost" onClick={() => downloadBank(b)} aria-label={`Download bank ${b.name}`}><Download /> TXT</Button>
+              <Button variant="quiz" className="sq-ghost" aria-label={`Delete bank ${b.name}`} onClick={() => remove(b.id, b.name, true)}><Trash2 /></Button>
             </div>
           ))
         )}
@@ -111,6 +123,7 @@ function Library() {
                   <Button variant="quiz" asChild><Link to="/exam/$examId" params={{ examId: e.id }}><Eye /> Open exam</Link></Button>
                   <Button variant="quiz" className="sq-ghost" onClick={() => downloadExam(e)}><Download /> Word</Button>
                   <Button variant="quiz" className="sq-ghost" onClick={() => downloadExam(e, true)}><KeyRound /> Answer key</Button>
+                  <Button variant="quiz" className="sq-ghost" aria-label={`Delete exam ${e.title}`} onClick={() => remove(e.id, e.title, false)}><Trash2 /></Button>
                 </div>
               </div>
             </div>
