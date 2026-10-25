@@ -28,8 +28,8 @@ export const Route = createFileRoute("/create")({
   component: CreateExam,
 });
 
-type Step = "info" | "source" | "upload" | "paste" | "types" | "bank" | "done";
-type Source = "qb" | "exam" | "paste" | null;
+type Step = "info" | "source" | "upload" | "paste" | "ai" | "types" | "bank" | "done";
+type Source = "qb" | "exam" | "paste" | "ai" | null;
 
 const TYPES: QuestionType[] = ["complete", "choose", "tf", "correct"];
 
@@ -55,6 +55,13 @@ function CreateExam() {
   const [pasteText, setPasteText] = useState("");
   const [parsed, setParsed] = useState<BankQuestion[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // Step 3c — AI generator
+  const [aiLesson, setAiLesson] = useState("");
+  const [aiCounts, setAiCounts] = useState<Record<QuestionType, number>>({ complete: 3, choose: 5, tf: 5, correct: 0 });
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiResult, setAiResult] = useState<BankQuestion[]>([]);
+  const generateFn = useServerFn(generateQuestions);
 
   // Step 4 — question types
   const [plan, setPlan] = useState<Record<QuestionType, { on: boolean; n: number; m: number }>>({
@@ -109,7 +116,9 @@ function CreateExam() {
   const chooseSource = (s: Exclude<Source, null>) => {
     setSource(s);
     setErr("");
+    setAiResult([]);
     if (s === "paste") setStep("paste");
+    else if (s === "ai") setStep("ai");
     else setStep("upload");
   };
 
