@@ -1,4 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
+import { generateQuestions } from "@/lib/ai/questions.functions";
+import { MAX_QUESTIONS } from "@/lib/ai/questions";
 import { useMemo, useRef, useState } from "react";
 import { Shell } from "@/components/Shell";
 import { Emblem } from "@/components/Emblem";
@@ -180,6 +183,51 @@ function CreateExam() {
       subject: subject || "General",
       createdAt: new Date().toISOString(),
       questions: qs,
+    };
+    try { saveBank(bank); } catch (error) { return showErr(error instanceof Error ? error.message : "Save failed."); }
+    setBanks(getBanks());
+    setPickedBanks((p) => ({ ...p, [bank.id]: true }));
+    setGrade(bankGrade);
+    setErr("");
+    setStep("types");
+  };
+
+  /* ---------- step 3c: AI generator ---------- */
+  const bumpAi = (t: QuestionType, d: number) =>
+    setAiCounts((c) => ({ ...c, [t]: Math.max(0, Math.min(20, (c[t] ?? 0) + d)) }));
+
+  const runGenerate = async () => {
+    const types = TYPES.filter((t) => aiCounts[t] > 0).map((t) => ({ type: t, count: aiCounts[t] }));
+    try {
+      validateAiInputClient({ lesson: aiLesson, subject, grade: bankGrade || grade, types });
+    } catch (error) {
+      return showErr(error instanceof Error ? error.message : "Check the inputs.");
+    }
+    setAiBusy(true);
+    setErr("");
+    try {
+      const res = await generateFn({ data: { lesson: aiLesson, subject, grade: bankGrade || grade, types } });
+      const qs: BankQuestion[] = res.questions.map((q) => ({ id: uid(), type: q.type, text: q.text, options: q.options ?? undefined, answer: q.answer }));
+      setAiResult(qs);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (error) {
+      showErr(error instanceof Error ? error.message : "The AI request failed.");
+    } finally {
+      setAiBusy(false);
+    }
+  };
+
+  const saveAiBank = () => {
+    if (!bankGrade) return showErr("Choose where to save it: Grade 1, 2 or 3.");
+    if (!bankName.trim()) return showErr("Give the question bank a name.");
+    if (!aiResult.length) return showErr("Press Generate with AI first.");
+    const bank: QuestionBank = {
+      id: uid(),
+      name: bankName.trim(),
+      grade: bankGrade,
+      subject: subject || "General",
+      createdAt: new Date().toISOString(),
+      questions: aiResult,
     };
     try { saveBank(bank); } catch (error) { return showErr(error instanceof Error ? error.message : "Save failed."); }
     setBanks(getBanks());
