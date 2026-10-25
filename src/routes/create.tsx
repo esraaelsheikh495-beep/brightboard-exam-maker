@@ -1,4 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
+import { generateQuestions } from "@/lib/ai/questions.functions";
+import { MAX_QUESTIONS } from "@/lib/ai/questions";
 import { useMemo, useRef, useState } from "react";
 import { Shell } from "@/components/Shell";
 import { Emblem } from "@/components/Emblem";
@@ -28,8 +31,8 @@ export const Route = createFileRoute("/create")({
   component: CreateExam,
 });
 
-type Step = "info" | "source" | "upload" | "paste" | "types" | "bank" | "done";
-type Source = "qb" | "exam" | "paste" | null;
+type Step = "info" | "source" | "upload" | "paste" | "ai" | "types" | "bank" | "done";
+type Source = "qb" | "exam" | "paste" | "ai" | null;
 
 const TYPES: QuestionType[] = ["complete", "choose", "tf", "correct"];
 
@@ -55,6 +58,13 @@ function CreateExam() {
   const [pasteText, setPasteText] = useState("");
   const [parsed, setParsed] = useState<BankQuestion[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // Step 3c — AI generator
+  const [aiLesson, setAiLesson] = useState("");
+  const [aiCounts, setAiCounts] = useState<Record<QuestionType, number>>({ complete: 3, choose: 5, tf: 5, correct: 0 });
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiResult, setAiResult] = useState<BankQuestion[]>([]);
+  const generateFn = useServerFn(generateQuestions);
 
   // Step 4 — question types
   const [plan, setPlan] = useState<Record<QuestionType, { on: boolean; n: number; m: number }>>({
@@ -109,7 +119,9 @@ function CreateExam() {
   const chooseSource = (s: Exclude<Source, null>) => {
     setSource(s);
     setErr("");
+    setAiResult([]);
     if (s === "paste") setStep("paste");
+    else if (s === "ai") setStep("ai");
     else setStep("upload");
   };
 
@@ -171,6 +183,51 @@ function CreateExam() {
       subject: subject || "General",
       createdAt: new Date().toISOString(),
       questions: qs,
+    };
+    try { saveBank(bank); } catch (error) { return showErr(error instanceof Error ? error.message : "Save failed."); }
+    setBanks(getBanks());
+    setPickedBanks((p) => ({ ...p, [bank.id]: true }));
+    setGrade(bankGrade);
+    setErr("");
+    setStep("types");
+  };
+
+  /* ---------- step 3c: AI generator ---------- */
+  const bumpAi = (t: QuestionType, d: number) =>
+    setAiCounts((c) => ({ ...c, [t]: Math.max(0, Math.min(20, (c[t] ?? 0) + d)) }));
+
+  const runGenerate = async () => {
+    const types = TYPES.filter((t) => aiCounts[t] > 0).map((t) => ({ type: t, count: aiCounts[t] }));
+    try {
+      validateAiInputClient({ lesson: aiLesson, subject, grade: bankGrade || grade, types });
+    } catch (error) {
+      return showErr(error instanceof Error ? error.message : "Check the inputs.");
+    }
+    setAiBusy(true);
+    setErr("");
+    try {
+      const res = await generateFn({ data: { lesson: aiLesson, subject, grade: bankGrade || grade, types } });
+      const qs: BankQuestion[] = res.questions.map((q) => ({ id: uid(), type: q.type, text: q.text, options: q.options ?? undefined, answer: q.answer }));
+      setAiResult(qs);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (error) {
+      showErr(error instanceof Error ? error.message : "The AI request failed.");
+    } finally {
+      setAiBusy(false);
+    }
+  };
+
+  const saveAiBank = () => {
+    if (!bankGrade) return showErr("Choose where to save it: Grade 1, 2 or 3.");
+    if (!bankName.trim()) return showErr("Give the question bank a name.");
+    if (!aiResult.length) return showErr("Press Generate with AI first.");
+    const bank: QuestionBank = {
+      id: uid(),
+      name: bankName.trim(),
+      grade: bankGrade,
+      subject: subject || "General",
+      createdAt: new Date().toISOString(),
+      questions: aiResult,
     };
     try { saveBank(bank); } catch (error) { return showErr(error instanceof Error ? error.message : "Save failed."); }
     setBanks(getBanks());
